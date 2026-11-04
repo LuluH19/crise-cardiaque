@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prédiction de survie – insuffisance cardiaque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap" rel="stylesheet">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.1/cdn.min.js"></script>
+<style>
+  :root {
+    --bg: #eef2f3;
+    --panel: #ffffff;
+    --ink: #14262b;
+    --muted: #5b6f75;
+    --line: #cfdadd;
+    --accent: #0f5c6b;
+    --accent-ink: #ffffff;
+    --ok: #1f7a4d;
+    --risk: #b3261e;
+    --field: #f7fafa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1a1d;
+      --panel: #152428;
+      --ink: #e6eff1;
+      --muted: #93a8ae;
+      --line: #2b4046;
+      --accent: #5fc0d1;
+      --accent-ink: #0b1a1e;
+      --ok: #5fd39a;
+      --risk: #ff8a80;
+      --field: #1b2e33;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 56px; }
+  h1 { font: 600 clamp(1.6rem, 3vw, 2.2rem)/1.2 "IBM Plex Serif", Georgia, serif; margin: 0 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 28px; max-width: 60ch; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  fieldset {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    margin: 0 0 16px; padding: 14px 18px 18px;
+  }
+  legend { font-weight: 600; padding: 0 8px; margin-left: -8px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px 18px; }
+  label.f { display: flex; flex-direction: column; gap: 4px; font-size: .92rem; }
+  label.f small { color: var(--muted); font-size: .78rem; }
+  input[type=number], input[type=url], select {
+    font: inherit; color: var(--ink); background: var(--field);
+    border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; width: 100%;
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .toggle { display: flex; align-items: center; gap: 10px; font-size: .92rem; cursor: pointer; padding: 8px 0; }
+  .toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  button {
+    font: inherit; font-weight: 500; cursor: pointer; border-radius: 4px; padding: 10px 18px;
+    border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink);
+  }
+  button.ghost { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .55; cursor: wait; }
+  aside { position: sticky; top: 20px; }
+  .result {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 20px;
+    min-height: 220px;
+  }
+  .result h2 { font: 600 1rem/1.3 "IBM Plex Sans", sans-serif; margin: 0 0 14px; color: var(--muted); }
+  .verdict { font: 600 1.7rem/1.2 "IBM Plex Serif", Georgia, serif; margin: 0 0 12px; }
+  .verdict.ok { color: var(--ok); }
+  .verdict.risk { color: var(--risk); }
+  .gauge { height: 10px; background: var(--field); border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+  .gauge span { display: block; height: 100%; background: var(--risk); transition: width .5s ease; }
+  .gauge-legend { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); margin-top: 6px; }
+  .err { color: var(--risk); font-size: .92rem; }
+  .empty { color: var(--muted); }
+  .api { margin-top: 16px; font-size: .85rem; }
+  .api summary { cursor: pointer; color: var(--muted); }
+  .api label { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+  .note { font-size: .78rem; color: var(--muted); margin-top: 14px; }
+  @media (prefers-reduced-motion: reduce) { .gauge span { transition: none; } }
+</style>
+
+</head>
+<body>
+<div class="wrap" x-data="predictor()">
+  <h1>Prédiction de survie</h1>
+  <p class="lead">Renseignez le dossier clinique du patient. Le modèle estime le risque de décès pendant la période de suivi.</p>
+
+  <div class="grid">
+    <form @submit.prevent="predict()" @reset.prevent="reset()">
+      <fieldset>
+        <legend>Profil</legend>
+        <div class="row">
+          <label class="f">Âge (ans)
+            <input type="number" min="1" max="120" step="1" required x-model.number="form.age">
+          </label>
+          <label class="f">Sexe
+            <select x-model.number="form.sex">
+              <option value="0">Femme</option>
+              <option value="1">Homme</option>
+            </select>
+          </label>
+          <label class="toggle"><input type="checkbox" x-model="flags.smoking"> Fumeur</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Antécédents</legend>
+        <div class="row">
+          <label class="toggle"><input type="checkbox" x-model="flags.anaemia"> Anémie</label>
+          <label class="toggle"><input type="checkbox" x-model="flags.diabetes"> Diabète</label>
+          <label class="toggle"><input type="checkbox" x-model="flags.high_blood_pressure"> Hypertension</label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Mesures cliniques</legend>
+        <div class="row">
+          <label class="f">Fraction d’éjection (%)
+            <input type="number" min="1" max="100" step="1" required x-model.number="form.ejection_fraction">
+            <small>Sang éjecté par le cœur à chaque contraction</small>
+          </label>
+          <label class="f">Créatinine phosphokinase (mcg/L)
+            <input type="number" min="0" step="1" required x-model.number="form.creatinine_phosphokinase">
+            <small>Enzyme CPK</small>
+          </label>
+          <label class="f">Plaquettes (kplaquettes/mL)
+            <input type="number" min="0" step="1" required x-model.number="form.platelets">
+          </label>
+          <label class="f">Créatinine sérique (mg/dL)
+            <input type="number" min="0" step="0.01" required x-model.number="form.serum_creatinine">
+          </label>
+          <label class="f">Sodium sérique (mEq/L)
+            <input type="number" min="0" step="1" required x-model.number="form.serum_sodium">
+          </label>
+          <label class="f">Durée de suivi (jours)
+            <input type="number" min="0" step="1" required x-model.number="form.time">
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit" :disabled="loading" x-text="loading ? 'Calcul en cours…' : 'Prédire la survie'"></button>
+        <button type="reset" class="ghost">Réinitialiser</button>
+      </div>
+    </form>
+
+    <aside>
+      <div class="result" aria-live="polite">
+        <h2>Résultat</h2>
+
+        <template x-if="error">
+          <p class="err" x-text="error"></p>
+        </template>
+
+        <template x-if="!error && !result">
+          <p class="empty">Remplissez le formulaire puis lancez la prédiction.</p>
+        </template>
+
+        <template x-if="!error && result">
+          <div>
+            <p class="verdict" :class="result.death ? 'risk' : 'ok'"
+               x-text="result.death ? 'Risque de décès élevé' : 'Survie probable'"></p>
+            <template x-if="result.proba !== null">
+              <div>
+                <div class="gauge" role="img" :aria-label="'Probabilité de décès : ' + pct(result.proba)">
+                  <span :style="'width:' + pct(result.proba)"></span>
+                </div>
+                <div class="gauge-legend">
+                  <span>Probabilité de décès</span>
+                  <strong x-text="pct(result.proba)"></strong>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <details class="api">
+        <summary>Paramètres de l’API</summary>
+        <label>URL de l’endpoint (POST, JSON)
+          <input type="url" x-model="apiUrl" @change="localStorage.setItem('apiUrl', apiUrl)">
+        </label>
+        <label class="toggle"><input type="checkbox" x-model="demo"> Mode démo (sans API, résultat fictif)</label>
+      </details>
+      <p class="note">Outil d’aide à l’analyse à visée pédagogique. Il ne remplace pas l’avis d’un professionnel de santé.</p>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const DEFAULTS = {
+    age: 60, creatinine_phosphokinase: 250, ejection_fraction: 38,
+    platelets: 262000, serum_creatinine: 1.1, serum_sodium: 137, sex: 1, time: 115
+  };
+  const FLAGS = { anaemia: false, diabetes: false, high_blood_pressure: false, smoking: false };
+
+  function predictor() {
+    return {
+      form: { ...DEFAULTS },
+      flags: { ...FLAGS },
+      apiUrl: (() => { try { return localStorage.getItem('apiUrl'); } catch (e) { return null; } })() || 'http://localhost:8000/predict',
+      demo: false,
+      loading: false,
+      error: '',
+      result: null,
+
+      payload() {
+        const p = { ...this.form };
+        for (const k in this.flags) p[k] = this.flags[k] ? 1 : 0;
+        return p;
+      },
+
+      pct(v) { return Math.round(v * 100) + ' %'; },
+
+      reset() {
+        this.form = { ...DEFAULTS };
+        this.flags = { ...FLAGS };
+        this.result = null; this.error = '';
+      },
+
+      async predict() {
+        this.loading = true; this.error = ''; this.result = null;
+        const body = this.payload();
+        try {
+          let data;
+          if (this.demo) {
+            data = this.fakeModel(body);
+          } else {
+            const res = await fetch(this.apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            if (!res.ok) throw new Error('L’API a répondu avec le statut ' + res.status + '.');
+            data = await res.json();
+          }
+          this.result = this.parse(data);
+        } catch (e) {
+          this.error = e instanceof TypeError
+            ? 'Impossible de joindre l’API. Vérifiez l’URL et que le serveur autorise le CORS.'
+            : e.message;
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      // Accepte { prediction | DEATH_EVENT, probability | proba | score }
+      parse(d) {
+        const proba = [d.probability, d.proba, d.score, d.probability_death]
+          .find(v => typeof v === 'number');
+        const label = d.prediction ?? d.DEATH_EVENT ?? d.death_event;
+        const death = label !== undefined ? Number(label) === 1 : proba >= 0.5;
+        if (label === undefined && proba === undefined)
+          throw new Error('Réponse inattendue : attendu { "prediction": 0|1, "probability": 0..1 }.');
+        return { death, proba: proba ?? null };
+      },
+
+      // Heuristique grossière pour tester l'interface, pas un vrai modèle.
+      fakeModel(p) {
+        const z = -1.2 + 0.04 * (p.age - 60) - 0.06 * (p.ejection_fraction - 38)
+          + 0.9 * (p.serum_creatinine - 1.1) - 0.012 * (p.time - 115)
+          - 0.03 * (p.serum_sodium - 137) + 0.3 * p.anaemia + 0.2 * p.high_blood_pressure;
+        const probability = 1 / (1 + Math.exp(-z));
+        return new Promise(r => setTimeout(() => r({ prediction: probability >= 0.5 ? 1 : 0, probability }), 400));
+      }
+    };
+  }
+</script>
+</body>
+</html>
