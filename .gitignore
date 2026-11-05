@@ -1,6 +1,7 @@
+.env
+node_modules/
 # Secrets et configuration du workspace : à ne jamais commiter
 config.json
-.env
 *.key
 
 # Python et notebooks

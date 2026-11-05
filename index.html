@@ -83,9 +83,7 @@
   .gauge-legend { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); margin-top: 6px; }
   .err { color: var(--risk); font-size: .92rem; }
   .empty { color: var(--muted); }
-  .api { margin-top: 16px; font-size: .85rem; }
-  .api summary { cursor: pointer; color: var(--muted); }
-  .api label { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+
   .note { font-size: .78rem; color: var(--muted); margin-top: 14px; }
   @media (prefers-reduced-motion: reduce) { .gauge span { transition: none; } }
 </style>
@@ -186,13 +184,6 @@
         </template>
       </div>
 
-      <details class="api">
-        <summary>Paramètres de l’API</summary>
-        <label>URL de l’endpoint (POST, JSON)
-          <input type="url" x-model="apiUrl" @change="localStorage.setItem('apiUrl', apiUrl)">
-        </label>
-        <label class="toggle"><input type="checkbox" x-model="demo"> Mode démo (sans API, résultat fictif)</label>
-      </details>
       <p class="note">Outil d’aide à l’analyse à visée pédagogique. Il ne remplace pas l’avis d’un professionnel de santé.</p>
     </aside>
   </div>
@@ -209,8 +200,6 @@
     return {
       form: { ...DEFAULTS },
       flags: { ...FLAGS },
-      apiUrl: (() => { try { return localStorage.getItem('apiUrl'); } catch (e) { return null; } })() || 'http://localhost:8000/predict',
-      demo: false,
       loading: false,
       error: '',
       result: null,
@@ -233,46 +222,50 @@
         this.loading = true; this.error = ''; this.result = null;
         const body = this.payload();
         try {
-          let data;
-          if (this.demo) {
-            data = this.fakeModel(body);
-          } else {
-            const res = await fetch(this.apiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body)
-            });
-            if (!res.ok) throw new Error('L’API a répondu avec le statut ' + res.status + '.');
-            data = await res.json();
+          const res = await fetch('/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const responseText = await res.text();
+          let response;
+          try {
+            response = JSON.parse(responseText);
+          } catch {
+            throw new Error(
+              `Réponse non JSON du serveur (HTTP ${res.status}). Ouvrez l’application via http://localhost:3001, pas avec Live Server.`
+            );
           }
-          this.result = this.parse(data);
+          if (!res.ok) throw new Error(response.error || 'L’API a répondu avec le statut ' + res.status + '.');
+          this.result = this.parse(response);
         } catch (e) {
           this.error = e instanceof TypeError
-            ? 'Impossible de joindre l’API. Vérifiez l’URL et que le serveur autorise le CORS.'
+            ? 'Impossible de joindre le serveur. Vérifiez qu’il est démarré.'
             : e.message;
         } finally {
           this.loading = false;
         }
       },
 
-      // Accepte { prediction | DEATH_EVENT, probability | proba | score }
+      // Accepte la réponse Azure ML { predictions, probabilites_defaut }.
       parse(d) {
-        const proba = [d.probability, d.proba, d.score, d.probability_death]
-          .find(v => typeof v === 'number');
-        const label = d.prediction ?? d.DEATH_EVENT ?? d.death_event;
-        const death = label !== undefined ? Number(label) === 1 : proba >= 0.5;
-        if (label === undefined && proba === undefined)
-          throw new Error('Réponse inattendue : attendu { "prediction": 0|1, "probability": 0..1 }.');
-        return { death, proba: proba ?? null };
-      },
-
-      // Heuristique grossière pour tester l'interface, pas un vrai modèle.
-      fakeModel(p) {
-        const z = -1.2 + 0.04 * (p.age - 60) - 0.06 * (p.ejection_fraction - 38)
-          + 0.9 * (p.serum_creatinine - 1.1) - 0.012 * (p.time - 115)
-          - 0.03 * (p.serum_sodium - 137) + 0.3 * p.anaemia + 0.2 * p.high_blood_pressure;
-        const probability = 1 / (1 + Math.exp(-z));
-        return new Promise(r => setTimeout(() => r({ prediction: probability >= 0.5 ? 1 : 0, probability }), 400));
+        const first = v => Array.isArray(v) ? v[0] : v;
+        const rawProba = first(
+          d.probability ?? d.proba ?? d.score ?? d.probability_death ?? d.probabilites_defaut
+        );
+        const rawLabel = first(d.prediction ?? d.predictions ?? d.DEATH_EVENT ?? d.death_event);
+        const label = rawLabel === undefined ? undefined : Number(rawLabel);
+        if (label !== undefined && label !== 0 && label !== 1)
+          throw new Error('Réponse inattendue : la prédiction doit être 0 ou 1.');
+        if (rawProba !== undefined &&
+            (typeof rawProba !== 'number' || !Number.isFinite(rawProba) || rawProba < 0 || rawProba > 1))
+          throw new Error('Réponse inattendue : la probabilité doit être comprise entre 0 et 1.');
+        if (label === undefined && rawProba === undefined)
+          throw new Error('Réponse inattendue : la prédiction ou sa probabilité est absente.');
+        return {
+          death: label !== undefined ? label === 1 : rawProba >= 0.5,
+          proba: rawProba ?? null
+        };
       }
     };
   }
