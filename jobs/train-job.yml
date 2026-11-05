@@ -1,0 +1,17 @@
+type: command
+display_name: heart-github-actions
+experiment_name: heart-failure
+code: ../src
+command: >-
+  python train.py
+  --data ${{inputs.data}}
+  --class_weight ${{inputs.class_weight}}
+  --test_size ${{inputs.test_size}}
+inputs:
+  data:
+    type: uri_file
+    path: azureml:heart-data:1
+  class_weight: balanced
+  test_size: 0.2
+environment: azureml:env-credit-sklearn:1
+compute: azureml:ccluca
