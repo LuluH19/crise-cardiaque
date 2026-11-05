@@ -85,6 +85,19 @@
   .empty { color: var(--muted); }
 
   .note { font-size: .78rem; color: var(--muted); margin-top: 14px; }
+  .proofs { margin-top: 40px; display: grid; gap: 14px; }
+  .proofs h2 { font: 600 1.35rem/1.25 "IBM Plex Serif", Georgia, serif; margin: 0; }
+  .proofs > p { color: var(--muted); margin: 0; max-width: 70ch; }
+  .proof-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+  .proof-grid figure {
+    margin: 0; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px;
+    display: grid; gap: 10px; align-content: start;
+  }
+  .proof-grid a { display: block; }
+  .proof-grid a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .proof-grid img { display: block; width: 100%; height: auto; border: 1px solid var(--line); background: #fff; }
+  .proof-grid figcaption { font-size: .88rem; }
+  .proof-grid figcaption strong { display: block; }
   @media (prefers-reduced-motion: reduce) { .gauge span { transition: none; } }
 </style>
 
@@ -187,6 +200,37 @@
       <p class="note">Outil d’aide à l’analyse à visée pédagogique. Il ne remplace pas l’avis d’un professionnel de santé.</p>
     </aside>
   </div>
+
+  <section class="proofs" aria-labelledby="proofs-title">
+    <h2 id="proofs-title">Captures du projet Azure ML</h2>
+    <p>Captures du studio prises pendant le projet. Cliquez sur une image pour l’ouvrir en grand.</p>
+    <div class="proof-grid">
+      <figure>
+        <a href="captures/etape2_data_asset.png" target="_blank" rel="noopener"><img src="captures/etape2_data_asset.png" loading="lazy" width="2000" height="177" alt="Data asset heart-failure-data, version 1, de type File"></a>
+        <figcaption><strong>Étape 2 : data asset</strong><code>heart-failure-data</code> version 1, type File.</figcaption>
+      </figure>
+      <figure>
+        <a href="captures/etape3_4_runs_completed.png" target="_blank" rel="noopener"><img src="captures/etape3_4_runs_completed.png" loading="lazy" width="2000" height="186" alt="Runs mlflow-balanced-20 et mlflow-none-20 à l’état Completed"></a>
+        <figcaption><strong>Étapes 3 et 4 : runs terminés</strong><code>mlflow-none-20</code> et <code>mlflow-balanced-20</code>, état Completed.</figcaption>
+      </figure>
+      <figure>
+        <a href="captures/etape4_comparaison_accuracy.png" target="_blank" rel="noopener"><img src="captures/etape4_comparaison_accuracy.png" loading="lazy" width="2000" height="1358" alt="Graphique comparant l’accuracy des runs mlflow-none-20 et mlflow-balanced-20"></a>
+        <figcaption><strong>Étape 4 : comparaison</strong>Accuracy des deux runs.</figcaption>
+      </figure>
+      <figure>
+        <a href="captures/etape5_pipeline.png" target="_blank" rel="noopener"><img src="captures/etape5_pipeline.png" loading="lazy" width="770" height="930" alt="Graphe du pipeline : heart-failure-data, préparation des données, puis entraînement et validation, étapes terminées"></a>
+        <figcaption><strong>Étape 5 : pipeline</strong>Graphe terminé : préparation, puis entraînement et validation.</figcaption>
+      </figure>
+      <figure>
+        <a href="captures/etape5_modele_v2.png" target="_blank" rel="noopener"><img src="captures/etape5_modele_v2.png" loading="lazy" width="2000" height="189" alt="Modèle heart-failure-model, version 2, expérience heart-pipeline, tag name heart-model"></a>
+        <figcaption><strong>Étape 5 : modèle</strong><code>heart-failure-model</code> version 2, issu de <code>heart-pipeline</code>.</figcaption>
+      </figure>
+      <figure>
+        <a href="captures/etape6_endpoint_url.png" target="_blank" rel="noopener"><img src="captures/etape6_endpoint_url.png" loading="lazy" width="1562" height="194" alt="URL REST de l’endpoint heart-alexis-11050814"></a>
+        <figcaption><strong>Étape 6 : endpoint</strong>URL REST de <code>heart-alexis-11050814</code>.</figcaption>
+      </figure>
+    </div>
+  </section>
 </div>
 
 <script>

@@ -63,6 +63,22 @@ export function createServer({ endpoint, key }) {
       return;
     }
 
+    // Seuls les fichiers PNG placés directement dans captures/ sont servis.
+    const capture = request.url.match(/^\/captures\/([a-z0-9_]+\.png)$/);
+    if (request.method === 'GET' && capture) {
+      try {
+        const image = await readFile(join(root, 'captures', capture[1]));
+        response.writeHead(200, {
+          'Content-Type': 'image/png',
+          'X-Content-Type-Options': 'nosniff'
+        });
+        response.end(image);
+      } catch {
+        sendJson(response, 404, { error: 'Ressource introuvable.' });
+      }
+      return;
+    }
+
     if (request.url !== '/api/predict') {
       sendJson(response, 404, { error: 'Ressource introuvable.' });
       return;

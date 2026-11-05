@@ -46,6 +46,23 @@ test('transmet la prédiction et la clé côté serveur à Azure ML', async () =
   assert.deepEqual(receivedPayload, { data: [payload] });
 });
 
+test('sert les captures du projet au format PNG', async () => {
+  const response = await fetch(`${appUrl}/captures/etape2_data_asset.png`);
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'image/png');
+  const bytes = Buffer.from(await response.arrayBuffer());
+  assert.equal(bytes.subarray(1, 4).toString('ascii'), 'PNG');
+});
+
+test('ne sert rien d’autre que les PNG de captures', async () => {
+  for (const path of ['/captures/absent.png', '/captures/..%2Fserver.js', '/captures/../server.js', '/.env']) {
+    const response = await fetch(`${appUrl}${path}`);
+    assert.equal(response.status, 404, path);
+    await response.arrayBuffer();
+  }
+});
+
 test('rejette un corps JSON invalide avant l’appel à Azure ML', async () => {
   const response = await fetch(`${appUrl}/api/predict`, {
     method: 'POST',
