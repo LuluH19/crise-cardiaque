@@ -1,8 +1,8 @@
 <img src="assets/icon.svg" width="64" height="64" alt="">
 
-# Groupe X - Heart Failure Clinical Records
+# Groupe A - Heart Failure Clinical Records
 
-Membres : Luca Delarue, Alexis Janus, Charlery ... (à compléter)
+Membres : Luca Delarue, Alexis Janus, Charlery Malcolm
 
 ## Données
 299 patients, 12 variables numériques, aucune valeur manquante, aucun doublon. Cible : `DEATH_EVENT` (1 = décès pendant le suivi). Classes : 0 = 203 patients (67,9 %), 1 = 96 patients (32,1 %). Data asset : `heart-failure-data` version 1. Source : UCI, licence CC BY 4.0.
