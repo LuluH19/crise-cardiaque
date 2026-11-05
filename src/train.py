@@ -34,7 +34,7 @@ def parse_args():
     """1. Lecture des paramètres passés au script."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str, required=True,
-                        help="Chemin du fichier CSV (data asset heart-data)")
+                        help="Chemin du fichier CSV (data asset heart-failure-data)")
     parser.add_argument("--class_weight", type=str, default="none",
                         choices=["none", "balanced"],
                         help="Pondération des classes")
@@ -42,7 +42,7 @@ def parse_args():
                         help="Part des données gardée pour le test (0.2 = 20 %%)")
     parser.add_argument("--min_recall", type=float, default=0.5,
                         help="Recall minimum pour valider le modèle")
-    parser.add_argument("--model_name", type=str, default="heart-model",
+    parser.add_argument("--model_name", type=str, default="heart-failure-model",
                         help="Nom du modèle dans le registre")
     parser.add_argument("--register", action="store_true",
                         help="Enregistre le modèle dans le registre s'il est validé")

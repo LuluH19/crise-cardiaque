@@ -1,2 +1,21 @@
 .env
 node_modules/
+# Secrets et configuration du workspace : à ne jamais commiter
+config.json
+*.key
+
+# Python et notebooks
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+.ipynb_aml_checkpoints/
+*.amltmp
+
+# Sorties locales
+mlruns/
+mlflow.db
+outputs/
+*.zip
+.DS_Store
