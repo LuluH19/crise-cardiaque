@@ -18,8 +18,6 @@ Régression logistique avec `StandardScaler`, `random_state` 42, expérience `he
 | `mlflow-none-20` | none | 0,2 | 0,817 | 0,786 | 0,579 | 0,667 | 0,859 |
 | `mlflow-balanced-20` | balanced | 0,2 | 0,800 | 0,733 | 0,579 | 0,647 | 0,855 |
 
-> À VÉRIFIER avant la remise, puis retirer cet encadré : recall et AUC viennent des runs Azure ; accuracy, precision et F1 viennent du test local sur le même découpage. Recopiez-les depuis l'onglet Metrics. Complétez aussi la version finale : `heart-failure-model` version ..., tag `validation : ...`.
-
 Les deux réglages ont le même recall sur ce découpage (11 décès détectés sur 19). `balanced` est retenu, car son recall moyen est meilleur sur 50 découpages (0,742 contre 0,657).
 
 **Limite :** `time` (durée de suivi) n'est connue qu'à la fin du suivi. Elle est gardée conformément à la fiche, mais elle ne serait pas disponible pour un nouveau patient.
